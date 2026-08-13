@@ -39,18 +39,19 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
-  svgator_player_flutter: ^2.0.0
-  webview_flutter: ^3.0.4
+  webview_flutter: ^4.2.2
+  lottie: ^3.3.3
+  # svgator_player_flutter eliminado: su pubspec exige Dart <=3.10.0,
+  # y tu SDK es 3.11.1. El código de ese paquete ahora vive localmente
+  # en lib/vendor/svgator_player.dart (ver svgator_player.dart adjunto).
 
+dependency_overrides:
+  webview_flutter: ^4.2.2
+
+# Herramientas de desarrollo y pruebas de la aplicación
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
@@ -65,9 +66,10 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/spain_flag.png
+    - assets/united_kingdom.png
+    - assets/pip_greeting.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
