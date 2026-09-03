@@ -1,0 +1,21 @@
+# ============================================================
+# CONFIGURACIÓN DEL SPLASH NATIVO
+# ============================================================
+# Esto es lo que se ve al instante al tocar el ícono de la app,
+# ANTES de que el motor de Flutter termine de iniciar. Usamos el
+# mismo color de fondo que SplashPage (blanco) para que el paso
+# de splash nativo -> SplashPage de Flutter sea imperceptible.
+#
+# Si más adelante tienes un logo de Pythonic como imagen (png),
+# agrega la línea: image: assets/logo.png
+# ============================================================
+
+flutter_native_splash:
+  color: "#FFFFFF"
+
+  android_12:
+    color: "#FFFFFF"
+
+  android: true
+  ios: true
+  web: false
