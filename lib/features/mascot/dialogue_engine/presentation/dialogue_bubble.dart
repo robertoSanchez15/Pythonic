@@ -36,52 +36,75 @@ class DialogueBubble extends StatelessWidget {
   // el botón respecto al borde superior del globo.
   //
   static const double _buttonTop = -24;
+  static const double _buttonRight = -8;
 
   @override
   Widget build(BuildContext context) {
+    // ============================================================
+    // IMPORTANTE — POR QUÉ ESTE Padding EXISTE
+    // ============================================================
+    //
+    // El botón "Continuar" se dibuja sobresaliendo del globo (ver
+    // _buttonTop/_buttonRight negativos, más abajo). Antes, ese
+    // desbordamiento visual se lograba solo con Clip.none, SIN
+    // reservar el espacio dentro del Stack.
+    //
+    // El problema: Flutter decide si un toque llega a los hijos de
+    // un Stack comprobando primero si el toque cae dentro del
+    // tamaño (size) del propio Stack — y ese tamaño lo define
+    // únicamente el hijo NO posicionado (el globo/CustomPaint de
+    // abajo). El botón, al estar fuera de esa caja, quedaba
+    // pintado pero NO tocable en la mayor parte de su área — solo
+    // una franja delgada donde alcanzaba a superponerse con el
+    // globo respondía al toque. Por eso a veces "no pasaba nada"
+    // al primer toque.
+    //
+    // La solución: reservar ese mismo espacio con Padding (top:
+    // 24, right: 8 — exactamente lo que el botón se desbordaba),
+    // y mover el botón a top: 0 / right: 0. El resultado visual es
+    // IDÉNTICO en píxeles, pero ahora ese espacio es parte real
+    // del tamaño del Stack, así que el botón es tocable en toda su
+    // superficie.
+    //
     return Stack(
-      // Permitimos que el botón sobresalga del globo.
       clipBehavior: Clip.none,
-
-      // ============================================================
-      // IMPORTANTE
-      // ============================================================
-      //
-      // El contenido del Stack determina su propia altura.
-      // No usamos Positioned(bottom: 0) aquí porque ExercisePage
-      // ya se encarga de posicionar TODO el DialogueBubble.
-      //
       children: [
         // ============================================================
-        // GLOBO
+        // GLOBO (con el espacio del botón reservado arriba/derecha)
         // ============================================================
-        CustomPaint(
-          painter: _BubblePainter(
-            radius: _radius,
-            tailWidth: _tailWidth,
-            tailHeight: _tailHeight,
-            tailLeft: _tailLeft,
+        Padding(
+          padding: const EdgeInsets.only(
+            top: -_buttonTop, // 24 — mismo valor que _buttonTop, en positivo
+            right: -_buttonRight, // 8
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              18,
-              20,
-              18 + _tailHeight,
+          child: CustomPaint(
+            painter: _BubblePainter(
+              radius: _radius,
+              tailWidth: _tailWidth,
+              tailHeight: _tailHeight,
+              tailLeft: _tailLeft,
             ),
-            child: Text(
-              text,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                20,
+                18,
+                20,
+                18 + _tailHeight,
+              ),
+              child: Text(
+                text,
 
-              // ======================================================
-              // TEXTO JUSTIFICADO
-              // ======================================================
-              textAlign: TextAlign.justify,
+                // ======================================================
+                // TEXTO JUSTIFICADO
+                // ======================================================
+                textAlign: TextAlign.justify,
 
-              style: const TextStyle(
-                fontSize: 16,
-                height: 1.4,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1F2937),
+                style: const TextStyle(
+                  fontSize: 16,
+                  height: 1.4,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F2937),
+                ),
               ),
             ),
           ),
@@ -91,8 +114,8 @@ class DialogueBubble extends StatelessWidget {
         // BOTÓN CONTINUAR
         // ============================================================
         Positioned(
-          top: _buttonTop,
-          right: -8,
+          top: 0,
+          right: 0,
           child: GestureDetector(
             onTap: onContinue,
             child: Container(

@@ -1,3 +1,5 @@
+//lib\features\mascot\data\svgator\pip_blink_controller_service.dart
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';

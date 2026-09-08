@@ -1,3 +1,5 @@
+//lib\features\mascot\dialogue_engine\presentation\dialogue_bubble_for.dart
+
 import 'package:flutter/material.dart';
 
 import '../domain/dialogue_line.dart';

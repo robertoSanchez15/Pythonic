@@ -1,22 +1,17 @@
-import 'dart:async';
+//lib\features\lesson\presentation\exercise_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../mascot/dialogue_engine/domain/dialogue_line.dart';
+
 import '../../../core/l10n/locale_controller.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../mascot/data/svgator/pip_blink.dart';
+import '../../mascot/dialogue_engine/presentation/pip_companion.dart';
 import '../domain/exercise_config.dart';
-import 'desktop_computer/desktop_computer.dart';
-import '../../mascot/dialogue_engine/presentation/dialogue_bubble_for.dart';
+import 'desk_scene.dart';
 
-/// Pantalla reutilizable para CUALQUIER ejercicio, en cualquier nivel.
-/// Todo el contenido (diálogos, apps requeridas, dataset, problema)
-/// viene de [config] — esta página no conoce ningún ejercicio en
-/// particular.
 class ExercisePage extends ConsumerStatefulWidget {
-  final String exerciseId; // se mantiene por la ruta /exercise/:exerciseId
+  final String exerciseId;
   final ExerciseConfig config;
 
   const ExercisePage({
@@ -30,58 +25,10 @@ class ExercisePage extends ConsumerStatefulWidget {
 }
 
 class _ExercisePageState extends ConsumerState<ExercisePage> {
-  int _lineIndex = 0;
-  bool _showBubble = false;
-
-  // Cuando Pip termina de presentarse/explicar, se "acopla" a una
-  // esquina y la PC pasa a tener el foco completo.
-  bool _pipDocked = false;
-
-  Timer? _entryTimer;
-
-  List<DialogueLine> get _lines => widget.config.introDialogue;
-
-  // Alto lógico (dp) del POCO M5s, donde se calibró desktopBottom = 75.0
-  // (1080x2400px físicos ÷ factor de densidad 2.75 xxhdpi ≈ 873dp).
-  static const _referenceHeight = 873.0;
-
-  @override
-  void initState() {
-    super.initState();
-
-    if (_lines.isEmpty) {
-      _pipDocked = true;
-      return;
-    }
-
-    _entryTimer = Timer(
-      const Duration(seconds: 1),
-      () {
-        if (mounted) setState(() => _showBubble = true);
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _entryTimer?.cancel();
-    super.dispose();
-  }
-
-  void _onContinue() {
-    if (_lineIndex < _lines.length - 1) {
-      setState(() => _lineIndex++);
-    } else {
-      setState(() {
-        _showBubble = false;
-        _pipDocked = true;
-      });
-    }
-  }
+  late bool _pipDocked = widget.config.introDialogue.isEmpty;
 
   void _onPipChipTapped() {
-    // TODO: reabrir diálogo — más adelante aquí conectamos el sistema
-    // de pistas (ExerciseConfig.hintFor) cuando el usuario pida ayuda.
+    // TODO: conectar ExerciseConfig.hintFor
   }
 
   Future<void> _handleExitRequest() async {
@@ -126,21 +73,38 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final locale = ref.watch(localeControllerProvider);
-    final isEn = locale.languageCode == 'en';
+    final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
+    final keyboardOpen = keyboardHeight > 0;
 
-    final heightScale = size.height / _referenceHeight;
+    final deskHeight = size.height * 0.14;
+    final desktopWidth = size.width * 0.82;
 
-    // Tamaño/posición de Pip en sus dos estados.
-    final pipTalkingSize = size.width * 0.40;
-    final pipDockedSize = size.width * 0.16;
-    final pipSize = _pipDocked ? pipDockedSize : pipTalkingSize;
+    // ÚNICO número que controla qué tan abajo/arriba está TODO el
+    // conjunto (escritorio + PC + Pip) con el teclado cerrado.
+    final baseGap = size.height * 0.03;
 
-    final pipLeft = _pipDocked ? 16.0 : size.width * 0.08;
-    final pipBottom = _pipDocked ? size.height * 0.62 : size.height * 0.16;
+    // Altura de la superficie del escritorio SIN teclado — es el ancla
+    // fija que usa la burbuja de Pip (nunca se mueve, ni con teclado).
+    final baseDeskTopY = baseGap + deskHeight;
 
-    // PC de escritorio: centrada, sobre el escritorio.
-    final desktopWidth = size.width * 0.82; // más ancha
-    final desktopBottom = 75.0 * heightScale; // escalado con referencia
+    // Altura real usada ahora mismo por desk/PC/Pip — sube junto con
+    // el teclado cuando está abierto.
+    final liveDeskTopY = baseDeskTopY + keyboardHeight;
+
+    // ============================================================
+    // AJUSTE FINO DE POSICIÓN — proporciones sobre la altura de
+    // pantalla (NO píxeles fijos), para que se vean igual en
+    // cualquier dispositivo. Calibrado originalmente en un POCO M5s
+    // (873dp de alto): 70px, -60px, 320px → factores de abajo.
+    // Positivo = sube. Negativo = baja.
+    // ============================================================
+    const deskPositionOffsetFactor = 70.0 / 873.0;
+    const desktopPositionOffsetFactor = -60.0 / 873.0;
+    const pipPositionOffsetFactor = 360.0 / 873.0;
+
+    final deskPositionOffset = size.height * deskPositionOffsetFactor;
+    final desktopPositionOffset = size.height * desktopPositionOffsetFactor;
+    final pipPositionOffset = size.height * pipPositionOffsetFactor;
 
     return PopScope(
       canPop: false,
@@ -149,6 +113,7 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
         _handleExitRequest();
       },
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         body: Stack(
           fit: StackFit.expand,
           children: [
@@ -160,95 +125,37 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
               ),
             ),
 
-            // ============================================================
-            // PC DE ESCRITORIO
-            // ============================================================
-            Positioned(
-              left: (size.width - desktopWidth) / 2,
-              bottom: desktopBottom,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 300),
-                opacity: _pipDocked ? 1.0 : 0.35,
-                child: IgnorePointer(
-                  ignoring: !_pipDocked,
-                  child: DesktopComputer(
-                    config: widget.config,
-                    width: desktopWidth,
-                  ),
-                ),
-              ),
+            DeskScene(
+              config: widget.config,
+              screenWidth: size.width,
+              deskHeight: deskHeight,
+              desktopWidth: desktopWidth,
+              deskTopY: liveDeskTopY,
+              deskPositionOffset: deskPositionOffset,
+              desktopPositionOffset: desktopPositionOffset,
+              pipDocked: _pipDocked,
             ),
 
-            // ============================================================
-            // PIP
-            // ============================================================
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
-              left: pipLeft,
-              bottom: pipBottom,
-              child: GestureDetector(
-                onTap: _pipDocked ? _onPipChipTapped : null,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeInOut,
-                  width: pipSize,
-                  height: pipSize,
-                  child: const PipBlink(),
-                ),
-              ),
-            ),
-
-            // ============================================================
-            // DIÁLOGO (arriba de Pip)
-            // ============================================================
-            if (!_pipDocked)
-              Positioned(
-                left: 20,
-                right: 20,
-                bottom: pipBottom + pipSize + 16,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 350),
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, -0.08),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  ),
-                  child: _showBubble
-                      ? DialogueBubbleFor(
-                          key: ValueKey(_lineIndex),
-                          line: _lines[_lineIndex],
-                          locale: locale,
-                          isLast: _lineIndex == _lines.length - 1,
-                          isEn: isEn,
-                          onContinue: _onContinue,
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ),
-
-            SafeArea(
-              child: Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: GestureDetector(
-                    onTap: _handleExitRequest,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.close_rounded,
-                          color: Colors.white, size: 20),
-                    ),
+            // Pip + burbuja se ocultan mientras el teclado está activo:
+            // liveDeskTopY ya sube por el teclado, y sumarle además el
+            // offset lo dispara fuera de la pantalla. En el flujo normal
+            // Pip solo "da teoría" antes de que el usuario empiece a
+            // escribir, así que ocultarlo con el teclado abierto no
+            // corta ningún diálogo en circunstancias normales.
+            Positioned.fill(
+              child: IgnorePointer(
+                ignoring: keyboardOpen,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: keyboardOpen ? 0.0 : 1.0,
+                  child: PipCompanion(
+                    lines: widget.config.introDialogue,
+                    locale: locale,
+                    screenWidth: size.width,
+                    standBottom: liveDeskTopY + pipPositionOffset,
+                    bubbleAnchorBottom: baseDeskTopY + pipPositionOffset,
+                    onFinished: () => setState(() => _pipDocked = true),
+                    onDockedTap: _onPipChipTapped,
                   ),
                 ),
               ),

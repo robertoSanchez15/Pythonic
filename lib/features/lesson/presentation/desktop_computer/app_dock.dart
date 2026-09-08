@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import '../../domain/desktop_app_type.dart';
 
-/// Fila de accesos directos arriba de la PC. Solo muestra lo que el
-/// ExerciseConfig declaró (ExerciseConfig.dockApps ya incluye Jupyter).
 class AppDock extends StatelessWidget {
   final List<DesktopAppType> apps;
   final DesktopAppType activeApp;
   final ValueChanged<DesktopAppType> onAppSelected;
+  final double iconSize;
+  final double spacing;
 
   const AppDock({
     super.key,
     required this.apps,
     required this.activeApp,
     required this.onAppSelected,
+    this.iconSize = 48,
+    this.spacing = 24,
   });
 
   @override
@@ -25,8 +27,9 @@ class AppDock extends StatelessWidget {
             app: app,
             isActive: app == activeApp,
             onTap: () => onAppSelected(app),
+            size: iconSize,
           ),
-          const SizedBox(width: 40),
+          SizedBox(width: spacing),
         ],
       ],
     );
@@ -37,11 +40,13 @@ class _DockIcon extends StatelessWidget {
   final DesktopAppType app;
   final bool isActive;
   final VoidCallback onTap;
+  final double size;
 
   const _DockIcon({
     required this.app,
     required this.isActive,
     required this.onTap,
+    this.size = 48,
   });
 
   @override
@@ -50,11 +55,11 @@ class _DockIcon extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: 48,
-        height: 48,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           color: isActive ? app.accentColor : Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(size * 0.29),
           border: Border.all(
             color: isActive ? app.accentColor : Colors.black12,
             width: 2,
@@ -63,11 +68,8 @@ class _DockIcon extends StatelessWidget {
             BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
           ],
         ),
-        child: Icon(
-          app.icon,
-          color: isActive ? Colors.white : app.accentColor,
-          size: 24,
-        ),
+        child: Icon(app.icon,
+            color: isActive ? Colors.white : app.accentColor, size: size * 0.5),
       ),
     );
   }
