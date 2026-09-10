@@ -1,4 +1,3 @@
-//lib\features\lesson\presentation\desktop_computer\desktop_computer.dart
 import 'package:flutter/material.dart';
 import '../../data/mock_python_executor.dart';
 import '../../domain/desktop_app_type.dart';
@@ -10,11 +9,21 @@ import 'desktop_monitor_frame.dart';
 class DesktopComputer extends StatefulWidget {
   final ExerciseConfig config;
   final double width;
+  final TextEditingController jupyterInputController;
+  final FocusNode jupyterInputFocusNode;
+
+  /// Avisa a DeskScene cuál es la app activa (incluida la inicial), para
+  /// que decida si mostrar la barra de botones — sin que la barra viva
+  /// dentro de este widget ni afecte su altura/posición.
+  final ValueChanged<DesktopAppType>? onActiveAppChanged;
 
   const DesktopComputer({
     super.key,
     required this.config,
     required this.width,
+    required this.jupyterInputController,
+    required this.jupyterInputFocusNode,
+    this.onActiveAppChanged,
   });
 
   @override
@@ -26,16 +35,32 @@ class _DesktopComputerState extends State<DesktopComputer> {
   late final List<DesktopAppType> _apps = widget.config.dockApps;
   late final List<Widget> _screens = _apps.map(_buildScreen).toList();
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => widget.onActiveAppChanged?.call(_activeApp));
+  }
+
   Widget _buildScreen(DesktopAppType app) {
     switch (app) {
       case DesktopAppType.jupyter:
-        return JupyterApp(onExecute: mockPythonExecutor);
+        return JupyterApp(
+          onExecute: mockPythonExecutor,
+          controller: widget.jupyterInputController,
+          focusNode: widget.jupyterInputFocusNode,
+        );
       case DesktopAppType.excel:
       case DesktopAppType.pdf:
       case DesktopAppType.csv:
       case DesktopAppType.json:
         return _PlaceholderScreen(app: app);
     }
+  }
+
+  void _selectApp(DesktopAppType app) {
+    setState(() => _activeApp = app);
+    widget.onActiveAppChanged?.call(app);
   }
 
   @override
@@ -45,15 +70,6 @@ class _DesktopComputerState extends State<DesktopComputer> {
       children: [
         DesktopMonitorFrame(
           width: widget.width,
-          // Todas las apps montadas SIEMPRE y siempre PINTADAS (con
-          // opacidad 0 la inactiva) — a propósito. Antes usábamos
-          // IndexedStack, que deja de pintar al hijo no activo; eso
-          // hacía que el teclado nativo se cerrara solo al cambiar de
-          // app mientras el TextField de Jupyter tenía foco, porque
-          // Flutter cierra la conexión con el teclado cuando el campo
-          // enfocado deja de componerse visualmente. Con Opacity, el
-          // widget sigue pintándose (solo invisible), así que el foco
-          // y el teclado se mantienen intactos al cambiar de app.
           screen: Stack(
             fit: StackFit.expand,
             children: [
@@ -74,7 +90,7 @@ class _DesktopComputerState extends State<DesktopComputer> {
         AppDock(
           apps: _apps,
           activeApp: _activeApp,
-          onAppSelected: (app) => setState(() => _activeApp = app),
+          onAppSelected: _selectApp,
         ),
       ],
     );

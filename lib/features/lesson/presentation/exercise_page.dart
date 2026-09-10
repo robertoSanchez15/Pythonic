@@ -1,5 +1,3 @@
-//lib\features\lesson\presentation\exercise_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/locale_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../mascot/dialogue_engine/presentation/pip_companion.dart';
+import '../domain/desktop_app_type.dart';
 import '../domain/exercise_config.dart';
 import 'desk_scene.dart';
 
@@ -26,6 +25,17 @@ class ExercisePage extends ConsumerStatefulWidget {
 
 class _ExercisePageState extends ConsumerState<ExercisePage> {
   late bool _pipDocked = widget.config.introDialogue.isEmpty;
+
+  final _jupyterController = TextEditingController();
+  final _jupyterFocusNode = FocusNode();
+  DesktopAppType _activeApp = DesktopAppType.alwaysAvailable;
+
+  @override
+  void dispose() {
+    _jupyterController.dispose();
+    _jupyterFocusNode.dispose();
+    super.dispose();
+  }
 
   void _onPipChipTapped() {
     // TODO: conectar ExerciseConfig.hintFor
@@ -73,31 +83,16 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final locale = ref.watch(localeControllerProvider);
+    final isEn = locale.languageCode == 'en';
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
     final keyboardOpen = keyboardHeight > 0;
 
     final deskHeight = size.height * 0.14;
     final desktopWidth = size.width * 0.82;
-
-    // ÚNICO número que controla qué tan abajo/arriba está TODO el
-    // conjunto (escritorio + PC + Pip) con el teclado cerrado.
     final baseGap = size.height * 0.03;
-
-    // Altura de la superficie del escritorio SIN teclado — es el ancla
-    // fija que usa la burbuja de Pip (nunca se mueve, ni con teclado).
     final baseDeskTopY = baseGap + deskHeight;
-
-    // Altura real usada ahora mismo por desk/PC/Pip — sube junto con
-    // el teclado cuando está abierto.
     final liveDeskTopY = baseDeskTopY + keyboardHeight;
 
-    // ============================================================
-    // AJUSTE FINO DE POSICIÓN — proporciones sobre la altura de
-    // pantalla (NO píxeles fijos), para que se vean igual en
-    // cualquier dispositivo. Calibrado originalmente en un POCO M5s
-    // (873dp de alto): 70px, -60px, 320px → factores de abajo.
-    // Positivo = sube. Negativo = baja.
-    // ============================================================
     const deskPositionOffsetFactor = 70.0 / 873.0;
     const desktopPositionOffsetFactor = -60.0 / 873.0;
     const pipPositionOffsetFactor = 360.0 / 873.0;
@@ -134,14 +129,13 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
               deskPositionOffset: deskPositionOffset,
               desktopPositionOffset: desktopPositionOffset,
               pipDocked: _pipDocked,
+              jupyterInputController: _jupyterController,
+              jupyterInputFocusNode: _jupyterFocusNode,
+              isEn: isEn,
+              activeApp: _activeApp,
+              onActiveAppChanged: (app) => setState(() => _activeApp = app),
             ),
 
-            // Pip + burbuja se ocultan mientras el teclado está activo:
-            // liveDeskTopY ya sube por el teclado, y sumarle además el
-            // offset lo dispara fuera de la pantalla. En el flujo normal
-            // Pip solo "da teoría" antes de que el usuario empiece a
-            // escribir, así que ocultarlo con el teclado abierto no
-            // corta ningún diálogo en circunstancias normales.
             Positioned.fill(
               child: IgnorePointer(
                 ignoring: keyboardOpen,
